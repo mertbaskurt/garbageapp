@@ -13,9 +13,9 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 model = load_model("mobilenet_model.h5")
 
 class_names = [
-    "battery", "biological", "brown-glass", "cardboard",
-    "clothes", "green-glass", "metal", "paper",
-    "plastic", "shoes", "trash", "white-glass"
+    "pil", "organik atık", "kahverengi cam", "karton",
+    "giysi", "yeşil cam", "metal", "kağıt",
+    "plastik", "ayakkabı", "çöp", "beyaz cam"
 ]
 
 @app.route("/")

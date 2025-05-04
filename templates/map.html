@@ -5,6 +5,9 @@
     <title>En Yakın Çöp Kutusu</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="/static/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cal+Sans&display=swap" rel="stylesheet">
     <style>
         #map {
             height: 500px;
@@ -35,7 +38,14 @@
         .trash-icon {
             background-color: #2ecc71;
             border-radius: 50%;
-            padding: 5px;
+            padding: 8px;
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-sizing: border-box;
         }
         .info-panel {
             background: white;
@@ -43,6 +53,7 @@
             border-radius: 8px;
             margin-top: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Cal Sans', sans-serif;
         }
         .distance-info {
             font-size: 1.2em;
@@ -68,20 +79,59 @@
             border-radius: 5px;
             background: #2ecc71;
         }
+        .nav-menu {
+            background-color: #2e8b57;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .nav-menu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .nav-menu a:hover {
+            background-color: #3cb371;
+        }
+        .cal-sans-regular {
+            font-family: 'Cal Sans', sans-serif;
+            font-weight: 400;
+            font-style: normal;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>En Yakın Çöp Kutusunu Bul</h1>
+        <nav class="nav-menu">
+            <ul>
+                <li><a href="/">Ana Sayfa</a></li>
+                <li><a href="/"">Tahmin Et</a></li>
+            </ul>
+        </nav>
+        <h1 class="cal-sans-regular">En Yakın Akıllı Çöp Kutusunu Bul</h1>
         <div class="map-container">
             <button class="location-button" onclick="getLocation()">Konumumu Göster</button>
             <div id="map"></div>
-            <div class="info-panel" id="infoPanel" style="display: none;">
+            <div class="info-panel cal-sans-regular" id="infoPanel" style="display: none;">
                 <h3>En Yakın Çöp Kutusu Bilgileri</h3>
                 <div class="distance-info" id="distanceInfo"></div>
                 <div id="trashTypes"></div>
                 <div class="capacity-info">
-                    <p>Doluluk Oranı:</p>
+                    <p>Doluluk Oranı: <span id="capacityValue"></span></p>
                     <div class="capacity-bar">
                         <div class="capacity-fill" id="capacityFill"></div>
                     </div>
@@ -97,6 +147,8 @@
         let userMarker;
         let trashBins = [];
         let currentNearestBin = null;
+        let trashMarkers = [];
+        let highlightedMarker = null;
         
         
         const trashTypes = {
@@ -137,10 +189,13 @@
                 const icon = L.divIcon({
                     className: 'trash-icon',
                     html: '🗑️',
-                    iconSize: [30, 30]
+                    iconSize: [24, 24],
+                    iconAnchor: [27, 27],
+                    style: 'width:55px; height:55px; padding:8px;'
                 });
 
                 const marker = L.marker(bin.location, { icon }).addTo(map);
+                trashMarkers.push(marker);
                 
                 let popupContent = `<b>Çöp Kutusu ${index + 1}</b><br>`;
                 popupContent += `Kabul Ettiği Atıklar:<br>`;
@@ -180,8 +235,9 @@
           
             let nearestBin = null;
             let minDistance = Infinity;
+            let nearestIndex = -1;
 
-            trashBins.forEach((bin) => {
+            trashBins.forEach((bin, idx) => {
                 const distance = Math.sqrt(
                     Math.pow(bin.location[0] - userLat, 2) + 
                     Math.pow(bin.location[1] - userLng, 2)
@@ -190,19 +246,32 @@
                 if (distance < minDistance) {
                     minDistance = distance;
                     nearestBin = bin;
+                    nearestIndex = idx;
                 }
             });
 
-            if (nearestBin) {
+            // Önceki vurgulamayı kaldır
+            if (highlightedMarker) {
+                highlightedMarker.setIcon(L.divIcon({
+                    className: 'trash-icon',
+                    html: '🗑️',
+                    iconSize: [24, 24],
+                    iconAnchor: [27, 27],
+                    style: 'width:55px; height:55px; padding:8px;'
+                }));
+            }
+
+            if (nearestBin && nearestIndex !== -1) {
                 currentNearestBin = nearestBin;
-                
-                L.marker(nearestBin.location, {
-                    icon: L.divIcon({
-                        className: 'nearest-trash-icon',
-                        html: '🗑️',
-                        iconSize: [40, 40]
-                    })
-                }).addTo(map).bindPopup("En yakın çöp kutusu");
+                highlightedMarker = trashMarkers[nearestIndex];
+                highlightedMarker.setIcon(L.divIcon({
+                    className: 'trash-icon',
+                    html: '🗑️',
+                    iconSize: [32, 32],
+                    iconAnchor: [22, 22],
+                    style: 'filter: drop-shadow(0 0 6px #2ecc71); width:45px; height:45px; padding:10px;'
+                }));
+                highlightedMarker.openPopup();
                 
                
                 L.polyline([ [userLat, userLng], nearestBin.location ], {
@@ -221,12 +290,11 @@
             const distanceInfo = document.getElementById('distanceInfo');
             const trashTypesDiv = document.getElementById('trashTypes');
             const capacityFill = document.getElementById('capacityFill');
+            const capacityValue = document.getElementById('capacityValue');
 
-            
             const distanceInMeters = Math.round(distance * 111000);
             distanceInfo.textContent = `Uzaklık: ${distanceInMeters} metre`;
 
-           
             trashTypesDiv.innerHTML = 'Kabul Ettiği Atıklar:<br>';
             bin.types.forEach(type => {
                 const typeSpan = document.createElement('span');
@@ -236,8 +304,8 @@
                 trashTypesDiv.appendChild(typeSpan);
             });
 
-           
             capacityFill.style.width = `${bin.capacity * 100}%`;
+            capacityValue.textContent = `${Math.round(bin.capacity * 100)}%`;
 
             infoPanel.style.display = 'block';
         }
