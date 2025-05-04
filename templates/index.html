@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Çöp Sınıflandırma (MobilNet)</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Çöp Sınıflandırma Sistemi</h1>
+    <form action="/predict" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" accept="image/*" required>
+      <button type="submit">Tahmin Et</button>
+    </form>
+
+    {% if image_url %}
+      <div class="result-box">
+        <div class="image-container">
+          <div class="image-wrapper">
+            <h2>Yüklenen Görsel:</h2>
+            <img src="{{ image_url }}" alt="Tahmin edilen görsel" width="300">
+            <h3>Tahmin: <span class="highlight">{{ prediction }}</span></h3>
+            <p>Güven: %{{ (confidence * 100) | round(2) }}</p>
+          </div>
+          
+          <div class="charts-container">
+            <div class="chart-wrapper">
+              <canvas id="radarChart"></canvas>
+            </div>
+            <a href="/map" class="map-button">En Yakın Çöp Kutusunu Bul</a>
+          </div>
+        </div>
+        
+        <button class="toggle-charts" onclick="toggleCharts()">Grafikleri Göster/Gizle</button>
+
+        <script>
+          function toggleCharts() {
+            const chartsContainer = document.querySelector('.charts-container');
+            chartsContainer.classList.toggle('show');
+          }
+
+          const labels = {{ class_names | tojson }};
+          const data = {{ all_probs[0] | tojson }};
+          const predictedClass = "{{ prediction }}";
+
+          // Radar Chart (Radar Grafiği)
+          const backgroundColors = labels.map(label => label === predictedClass ? 'rgba(46, 139, 87, 0.6)' : 'rgba(100, 149, 237, 0.2)');
+          const borderColors = labels.map(label => label === predictedClass ? 'rgba(46, 139, 87, 1)' : 'rgba(100, 149, 237, 1)');
+          new Chart(document.getElementById('radarChart'), {
+            type: 'radar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Tahmin Olasılıkları',
+                data: data.map(val => (val * 100).toFixed(2)),
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 2,
+                pointBackgroundColor: borderColors,
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: borderColors
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                r: {
+                  beginAtZero: true,
+                  max: 100,
+                  ticks: {
+                    stepSize: 20
+                  }
+                }
+              },
+              plugins: {
+                legend: {
+                  position: 'top',
+                }
+              }
+            }
+          });
+        </script>
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
